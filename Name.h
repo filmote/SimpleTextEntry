@@ -1,190 +1,175 @@
 #pragma once
 
-#include <Arduboy2.h>
+#include <Arduino.h>
 
-#define NAME_LENGTH 10
-#define NAME_CHARACTER_SPACING 7
-#define NAME_UNDERLINE_WIDTH 5
+namespace NameHelper
+{
+	// Note that constexpr implies inline linkage
+	constexpr bool isUpper(char c)
+	{
+		return (c >= 'A' && c <= 'Z');
+	}
+	
+	constexpr bool isLower(char c)
+	{
+		return (c >= 'a' && c <= 'z');
+	}
+	
+	constexpr bool isAlpha(char c)
+	{
+		return (isLower(c) || isUpper(c));
+	}
+}
 
-#define ASCII_SPACE 32
-#define ASCII_CAPITAL_A 65
-#define ASCII_CAPITAL_B 66
-#define ASCII_CAPITAL_Y 89
-#define ASCII_CAPITAL_Z 90
-#define ASCII_LOWER_A 97
-#define ASCII_LOWER_B 98
-#define ASCII_LOWER_Y 121
-#define ASCII_LOWER_Z 122
+template< uint8_t LengthValue >
+class NameEditor
+{
+public:
+	constexpr static const uint8_t Length = LengthValue;
+	constexpr static const uint8_t FirstIndex = 0;
+	constexpr static const uint8_t LastIndex = Length - 1;
+	constexpr static const uint8_t NullIndex = Length;
 
+private:	 
+	uint8_t index;
+	char name[Length + 1];
 
-class Name {
+public:
+	NameEditor(void)
+	{
+		this->name[NullIndex] = '\0';
+	}
 
-  public: 
+	constexpr uint8_t getLength(void) const
+	{
+		return Length;
+	}
 
-    Name() {};
-  
+	uint8_t getCharIndex(void)
+	{
+		return this->index;	
+	}
+	
+	char getChar(uint8_t index) const
+	{
+		return this->name[index];
+	}
+	
+	void setCharIndex(uint8_t value)
+	{
+		this->index = value;	
+	}
+	
+	void setChar(uint8_t index, char value)
+	{
+		this->name[index] = value;
+	}
 
-    // Properties ..
+	void incrementCharIndex(void)
+	{
+		if (this->index < LastIndex)
+			++this->index;
+	}
+	
+	void decrementCharIndex(void)
+	{
+		if (this->index > FirstIndex)
+			--this->index;	
+	}
+	
+	void incrementChar(void)
+	{
+		this->incrementChar(this->index);
+	}
+	
+	void incrementChar(uint8_t index)
+	{
+		const char c = this->name[index];
+		if(c == ' ')
+		{
+			this->name[index] = 'A';
+		}
+		else if(c == 'z')
+		{
+			this->name[index] = ' ';
+		}
+		else if(c == 'Z')
+		{
+			this->name[index] = 'a';
+		}
+		else if((c >= 'a' && c < 'z') || (c >= 'A' && c < 'Z'))
+		{
+			++this->name[index];
+		}
+	}
+	
+	void decrementChar(void)
+	{
+		this->decrementChar(this->index);
+	}
+	
+	void decrementChar(uint8_t index)
+	{
+		const char c = this->name[index];
+		if(c == ' ')
+		{
+			this->name[index] = 'z';
+		}
+		else if(c == 'A')
+		{
+			this->name[index] = ' ';
+		}
+		else if(c == 'a')
+		{
+			this->name[index] = 'Z';
+		}
+		else if((c > 'a' && c <= 'z') || (c > 'A' && c <= 'Z'))
+		{
+			--this->name[index];
+		}
+	}
+	
+	char * getString(void)
+	{
+		return this->name;	
+	}
+	
+	const char * getString(void) const
+	{
+		return this->name;	
+	}
+	
+	char operator[](uint8_t index) const
+	{
+		return this->name[index];
+	}
+	
+	void clear(uint16_t startingLocation)
+	{
+		this->index = 0;
+			
+		for(uint8_t i = 0; i < Length; ++i)
+			this->name[i] = ' ';
 
-    uint8_t getCharIndex();
-    char getChar(uint8_t idx);
-    void setCharIndex(uint8_t val);
-    void setChar(uint8_t idx, uint8_t val);
-
-
-    // Methods ..
-
-    void incCharIndex();
-    void decCharIndex();
-    void incChar(uint8_t idx);
-    void decChar(uint8_t idx);
-    void clear(uint16_t startingLocation);
-    void retrieve(uint16_t startingLocation);
-    void save(uint16_t startingLocation);
-    char* getString();
-
-  private:
-   
-    uint8_t _charIndex;
-    uint8_t _chars[NAME_LENGTH];
-    uint16_t _eeprom_start;
-
+		this->save(startingLocation);
+	}
+	
+	void retrieve(uint16_t startingLocation)
+	{
+		using namespace NameHelper;
+	
+		this->index = 0;
+		
+		for(uint8_t i = 0; i < Length; ++i)
+		{
+			char c = EEPROM.read(startingLocation + i);
+			this->name[i] = isAlpha(c) ? c : ' ';
+		}
+	}
+	
+	void save(uint16_t startingLocation)
+	{
+		for(uint8_t i = 0; i < Length; ++i)
+			EEPROM.update(startingLocation + i, this->name[i]);
+	}
 };
-
-
-//--------------------------------------------------------------------------------------------------------------------------
-// Properties ..
-
-uint8_t Name::getCharIndex() {
-  return _charIndex;
-}
-
-char Name::getChar(uint8_t idx) {
-  return _chars[idx];
-}
-
-void Name::setCharIndex(uint8_t val) {
-  _charIndex = val;
-}
-
-void Name::setChar(uint8_t idx, uint8_t val) {
-  _chars[idx] = val;
-}
-
-
-//--------------------------------------------------------------------------------------------------------------------------
-// Methods ..
-
-void Name::incCharIndex() {
-  if (_charIndex < NAME_LENGTH - 1) _charIndex++;
-}
-
-void Name::decCharIndex() {
-  if (_charIndex > 0) _charIndex--;
-}
-
-void Name::incChar(uint8_t idx) {
-  
-  switch (_chars[idx]) {
-
-    case ASCII_SPACE:
-      _chars[idx] = ASCII_CAPITAL_A;
-      break;
-
-    case ASCII_CAPITAL_A ... ASCII_CAPITAL_Y:
-      _chars[idx]++;
-      break;
-
-    case ASCII_CAPITAL_Z:
-      _chars[idx] = ASCII_LOWER_A;
-      break;
-
-    case ASCII_LOWER_A ... ASCII_LOWER_Y:
-      _chars[idx]++;
-      break;
-
-    case ASCII_LOWER_Z:
-      _chars[idx] = ASCII_SPACE;
-      break;
-    
-  }
-
-}
-
-void Name::decChar(uint8_t idx) {
-
-  switch (_chars[idx]) {
-
-    case ASCII_SPACE:
-      _chars[idx] = ASCII_LOWER_Z;
-      break;
-
-    case ASCII_CAPITAL_A:
-      _chars[idx] = ASCII_SPACE;
-      break;
-
-    case ASCII_CAPITAL_B ... ASCII_CAPITAL_Z:
-      _chars[idx]--;
-      break;
-
-    case ASCII_LOWER_A:
-      _chars[idx] = ASCII_CAPITAL_Z;
-      break;
-
-    case ASCII_LOWER_B ... ASCII_LOWER_Z:
-      _chars[idx]--;
-      break;
-    
-  }
-
-}
-
-void Name::clear(uint16_t startingLocation) {
-
-  _charIndex = 0;
-      
-  for (uint8_t x = 0; x < NAME_LENGTH; x++) {
-    
-    _chars[x] = ASCII_SPACE;
-
-  }
-
-  Name::save(startingLocation);
-
-}
-
-void Name::retrieve(uint16_t startingLocation) {
-
-  _charIndex = 0;
-      
-  for (uint8_t x = 0; x < NAME_LENGTH; x++) {
-    
-    _chars[x] = EEPROM.read(startingLocation + x);
-
-  }
-
-
-  // Has it been initialised ?  If not clear it ..
-
-  if (_chars[0] != ASCII_SPACE    &&                     
-      (_chars[0] < ASCII_CAPITAL_A || _chars[0] > ASCII_CAPITAL_Z) &&     
-      (_chars[0] < ASCII_LOWER_A   || _chars[0] > ASCII_LOWER_Z)       
-      ) { clear(startingLocation); }
-
-}
-
-void Name::save(uint16_t startingLocation) {
-
-  for (uint8_t x = 0; x < NAME_LENGTH; x++) {
-    
-    EEPROM.update(startingLocation + x, getChar(x));
-
-  }
-
-}
-
-char* Name::getString() {
-
-  return _chars;
-
-}
