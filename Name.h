@@ -12,7 +12,7 @@ namespace NameHelper
 	
 	constexpr bool isLower(char c)
 	{
-		return (c >= 'a' && c <= 'a');
+		return (c >= 'a' && c <= 'z');
 	}
 	
 	constexpr bool isAlpha(char c)
